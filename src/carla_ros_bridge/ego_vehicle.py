@@ -53,11 +53,13 @@ class EgoVehicle(Vehicle):
             return PedalControlVehicle(carla_actor=carla_actor, parent=parent)
         elif ego_vehicle_control_mode == 'ackermann':
             return AckermannControlVehicle(carla_actor=carla_actor, parent=parent)
+        elif ego_vehicle_control_mode == 'none':
+            return EgoVehicle(carla_actor=carla_actor, parent=parent)
         else:
             raise ValueError(
                 "Unsupported control mode of the ego vehicle '{}'"
                 " configured at '/carla/ego_vehicle/control_mode' parameter."
-                " Only 'pedal' or 'ackermann' allowed!".format(ego_vehicle_control_mode))
+                " Only 'pedal', 'ackermann' or 'none' allowed!".format(ego_vehicle_control_mode))
 
     def __init__(self, carla_actor, parent):
         """
