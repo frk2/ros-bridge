@@ -14,6 +14,7 @@ from abc import abstractmethod
 import rospy
 from std_msgs.msg import Header
 
+import threading
 
 class Parent(object):
 
@@ -39,6 +40,9 @@ class Parent(object):
         self.carla_world = carla_world
         self.frame_id = frame_id
         self.child_actors = {}
+        self.dead_child_actors = []
+        self.new_child_actors = {}
+        self.update_child_actor_list_lock = threading.Lock()
 
     def destroy(self):
         """
@@ -50,9 +54,11 @@ class Parent(object):
 
         :return:
         """
-        for dummy_actor_id, actor in self.child_actors.iteritems():
-            actor.destroy()
-        self.child_actors.clear()
+        with self.update_child_actor_list_lock:
+            for dummy_actor_id, actor in self.child_actors.iteritems():
+                actor.destroy()
+                actor = None
+            self.child_actors.clear()
         self.carla_world = None
 
     def get_frame_id(self):
@@ -82,45 +88,43 @@ class Parent(object):
         """
         return self.carla_world
 
-    def _create_new_children(self):
+    def get_new_child_actors(self):
         """
-        Private function to create the actors in the carla world
-        which are children actors of this parent.
+        Private function to get children actors of this parent.
 
         :return:
         """
-        for actor in self.carla_world.get_actors():
+        for actor in self.get_actor_list():
             if ((actor.parent and actor.parent.id == self.carla_id)
                     or (actor.parent is None and self.carla_id == 0)):
                 if actor.id not in self.child_actors:
                     if actor.type_id.startswith('traffic'):
-                        self.child_actors[actor.id] = Traffic.create_actor(
+                        self.new_child_actors[actor.id] = Traffic.create_actor(
                             carla_actor=actor, parent=self)
                     elif actor.type_id.startswith("vehicle"):
-                        self.child_actors[actor.id] = Vehicle.create_actor(
+                        self.new_child_actors[actor.id] = Vehicle.create_actor(
                             carla_actor=actor, parent=self)
                     elif actor.type_id.startswith("sensor"):
-                        self.child_actors[actor.id] = Sensor.create_actor(
+                        self.new_child_actors[actor.id] = Sensor.create_actor(
                             carla_actor=actor, parent=self)
                     elif actor.type_id.startswith("spectator"):
-                        self.child_actors[actor.id] = Spectator(
+                        self.new_child_actors[actor.id] = Spectator(
                             carla_actor=actor, parent=self)
                     else:
-                        self.child_actors[actor.id] = Actor(
+                        self.new_child_actors[actor.id] = Actor(
                             carla_actor=actor, parent=self)
 
-    def _destroy_dead_children(self):
+    def get_dead_child_actors(self):
         """
-        Private function to detect and remove non existing children actors
+        Private function to detect non existing children actors
 
         :return:
         """
-        actors_to_delete = []
         for child_actor_id, child_actor in self.child_actors.iteritems():
             if not child_actor.carla_actor.is_alive:
                 rospy.loginfo(
                     "Detected non alive child Actor(id={})".format(child_actor_id))
-                actors_to_delete.append(child_actor_id)
+                self.dead_child_actors.append(child_actor_id)
             else:
                 found_actor = False
                 for actor in self.carla_world.get_actors():
@@ -130,11 +134,37 @@ class Parent(object):
                 if not found_actor:
                     rospy.loginfo(
                         "Detected not existing child Actor(id={})".format(child_actor_id))
-                    actors_to_delete.append(child_actor_id)
+                    self.dead_child_actors.append(child_actor_id)
 
-        for actor_id in actors_to_delete:
-            self.child_actors[actor_id].destroy()
-            del self.child_actors[actor_id]
+    def update_child_actors(self):
+        """
+        Virtual (non abstract) function to update the children of this object.
+
+        The update part of the parent class consists
+        of updating the children of this by:
+
+        create new child actors
+        destroy dead children
+        update the exising children
+
+        :return:
+        """
+        self.get_new_child_actors()
+        self.get_dead_child_actors()
+        
+        if len(self.dead_child_actors) > 0 or len(self.new_child_actors) > 0:
+            with self.update_child_actor_list_lock:
+                for actor_id in self.dead_child_actors:
+                    self.child_actors[actor_id].destroy()
+                    del self.child_actors[actor_id]
+                self.dead_child_actors = []
+
+                for actor_id,actor in self.new_child_actors.iteritems():
+                    self.child_actors[actor_id] = actor
+                self.new_child_actors.clear()
+
+        for dummy_actor_id, actor in self.child_actors.iteritems():
+            actor.update_child_actors()
 
     def update(self):
         """
@@ -147,16 +177,13 @@ class Parent(object):
         The update part of the parent class consists
         of updating the children of this by:
 
-        create new child actors
-        destroy dead children
         update the exising children
 
         :return:
         """
-        self._create_new_children()
-        self._destroy_dead_children()
-        for dummy_actor_id, actor in self.child_actors.iteritems():
-            actor.update()
+        with self.update_child_actor_list_lock:
+            for dummy_actor_id, actor in self.child_actors.iteritems():
+                actor.update()
 
     def get_msg_header(self):
         """
@@ -246,6 +273,18 @@ class Parent(object):
             "carla_ros_bridge.Child and carla_ros_bridge.CarlaRosBridge"
             "If this error becomes visible the class hierarchy is somehow broken")
 
+    @abstractmethod
+    def get_actor_list(self):
+        """
+        Pure virtual function to get the list of actors
+
+        :return: the list of actors
+        :rtype: list
+        """
+        raise NotImplementedError(
+            "This function is re-implemented by"
+            "carla_ros_bridge.Child and carla_ros_bridge.CarlaRosBridge"
+            "If this error becomes visible the class hierarchy is somehow broken")
 
 # these imports have to be at the end to resolve cyclic dependency
 from carla_ros_bridge.actor import Actor         # noqa, pylint: disable=wrong-import-position

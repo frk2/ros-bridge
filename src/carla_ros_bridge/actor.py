@@ -52,7 +52,7 @@ class Actor(Child):
             carla_id=carla_actor.id, carla_world=carla_actor.get_world(),
             parent=parent, topic_prefix=topic_prefix)
         self.carla_actor = carla_actor
-        rospy.logdebug("Created Actor-{}(id={}, parent_id={},"
+        rospy.logwarn("Created Actor-{}(id={}, parent_id={},"
                        " type={}, topic_name={}, attributes={}".format(
                            self.__class__.__name__, self.get_id(),
                            self.get_parent_id(), self.carla_actor.type_id,
@@ -73,7 +73,7 @@ class Actor(Child):
 
         :return:
         """
-        rospy.logdebug(
+        rospy.logwarn(
             "Destroying {}-Actor(id={})".format(self.__class__.__name__, self.get_id()))
         self.carla_actor = None
         super(Actor, self).destroy()
