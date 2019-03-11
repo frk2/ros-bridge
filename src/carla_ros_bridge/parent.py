@@ -94,21 +94,21 @@ class Parent(object):
             if ((actor.parent and actor.parent.id == self.carla_id)
                     or (actor.parent is None and self.carla_id == 0)):
                 if actor.id not in self.child_actors:
-                    if actor.type_id.startswith('traffic'):
-                        self.child_actors[actor.id] = Traffic.create_actor(
-                            carla_actor=actor, parent=self)
-                    elif actor.type_id.startswith("vehicle"):
+                    # if actor.type_id.startswith('traffic'):
+                    #     self.child_actors[actor.id] = Traffic.create_actor(
+                    #         carla_actor=actor, parent=self)
+                    if actor.type_id.startswith("vehicle"):
                         self.child_actors[actor.id] = Vehicle.create_actor(
                             carla_actor=actor, parent=self)
-                    elif actor.type_id.startswith("sensor"):
-                        self.child_actors[actor.id] = Sensor.create_actor(
-                            carla_actor=actor, parent=self)
-                    elif actor.type_id.startswith("spectator"):
-                        self.child_actors[actor.id] = Spectator(
-                            carla_actor=actor, parent=self)
-                    else:
-                        self.child_actors[actor.id] = Actor(
-                            carla_actor=actor, parent=self)
+                    # elif actor.type_id.startswith("sensor"):
+                    #     self.child_actors[actor.id] = Sensor.create_actor(
+                    #         carla_actor=actor, parent=self)
+                    # elif actor.type_id.startswith("spectator"):
+                    #     self.child_actors[actor.id] = Spectator(
+                    #         carla_actor=actor, parent=self)
+                    # else:
+                    #     self.child_actors[actor.id] = Actor(
+                    #         carla_actor=actor, parent=self)
 
     def _destroy_dead_children(self):
         """
