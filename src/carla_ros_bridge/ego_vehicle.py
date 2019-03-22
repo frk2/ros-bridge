@@ -176,6 +176,7 @@ class EgoVehicle(Vehicle):
 
         :return:
         """
+
         current_time_sec = self.get_current_ros_time().to_sec()
         delta_time = current_time_sec - self.info.current.time_sec
         current_speed = phys.get_vehicle_speed(self.carla_actor)
@@ -187,6 +188,7 @@ class EgoVehicle(Vehicle):
         self.info.current.time_sec = current_time_sec
         self.info.current.speed = current_speed
         self.info.current.speed_abs = abs(current_speed)
+        # print("Got current speed: {}".format(current_speed))
 
     def vehicle_control_cycle(self):
         """

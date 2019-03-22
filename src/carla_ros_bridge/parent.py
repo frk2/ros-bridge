@@ -103,12 +103,12 @@ class Parent(object):
                     # elif actor.type_id.startswith("sensor"):
                     #     self.child_actors[actor.id] = Sensor.create_actor(
                     #         carla_actor=actor, parent=self)
-                    # elif actor.type_id.startswith("spectator"):
-                    #     self.child_actors[actor.id] = Spectator(
-                    #         carla_actor=actor, parent=self)
-                    # else:
-                    #     self.child_actors[actor.id] = Actor(
-                    #         carla_actor=actor, parent=self)
+                    elif actor.type_id.startswith("spectator"):
+                        self.child_actors[actor.id] = Spectator(
+                            carla_actor=actor, parent=self)
+                    else:
+                        self.child_actors[actor.id] = Actor(
+                            carla_actor=actor, parent=self)
 
     def _destroy_dead_children(self):
         """
